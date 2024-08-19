@@ -1,0 +1,109 @@
+---
+title: "lobster_exploration"
+author: "Maddy Enda"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+#adding the necessary packages
+```{r}
+rm(list=ls())
+library(tidyverse)
+library(janitor)
+library(here)
+
+```
+
+#reading in the lobster data set
+```{r}
+lobster_abundance <-read_csv(here::here("data", "Lobster_Abundance_All_Years_20210412.csv"), na = c("-99999", "")) %>% 
+  clean_names() %>% 
+  uncount(count)
+
+```
+
+#creating a summary table
+
+```{r}
+lobster_carapace_data <-lobster_abundance %>%
+  group_by(site, year) %>%
+  summarise(count=n(), mean_length= mean(size_mm, na.rm= TRUE))
+ 
+```
+
+#visualizing the summary table
+```{r}
+lobster_carapace_plot <-ggplot(lobster_carapace_data, aes(x= year, y= count, group= site, shape = site)) + geom_point() +labs( title= "Total Lobsters Observed by Year")
+
+lobster_carapace_plot
+
+ggsave(file ="Total_Lobsters_by_Year.png")
+```
+
+#creating a subset with data from 2020
+```{r}
+#subsetting by year
+lobsters_2020 <- lobster_abundance %>%
+  filter(year==2020)
+
+#creating case_when function
+  lobsters_2020_pt2 <-lobsters_2020 %>%
+   mutate(legal= case_when( size_mm >= 79.76 ~ "yes", 
+    size_mm < 79.76 ~ "no")) %>%
+    group_by(legal,site) %>%
+      summarize(count=n())
+  
+```
+
+#visualizing our new dataset of legal
+```{r}
+ggplot(lobsters_2020_pt2, aes(x= site, y= count, fill = legal)) +geom_col(position = "fill") + labs(title= "Proportion of Legal versus Illegal Lobsters at Each Site 2020")
+
+ggsave(file= "Proportion of Legal Versus Illegal Lobsters at Each Site 2020.png")
+```
+
+#Data Wrangling practice
+
+```{r}
+#Using filter
+Lobster_sites <-lobster_abundance %>%
+  filter(site %in% c("IVEE", "CARP", "NAPL"))
+ 
+# Using group_by
+lobster_mean_sd <- lobster_abundance %>%
+  group_by(site) %>%
+  summarize( mean_length =mean(size_mm), sd_length = sd(size_mm, na.rm= TRUE))
+
+lobster_max <- lobster_abundance %>%
+  group_by(site, month) %>%
+  summarize(max_size =max(size_mm, na.rm= TRUE))
+
+#using mutate
+lobsters_plus <- lobster_abundance %>%
+  mutate(length_cm =
+           size_mm / 100)
+#lowercase sites
+lobsters_plus$site <- tolower(lobsters_plus$site)
+
+#area column to a character
+lobsters_plus %>%
+  mutate(area= as.character(area))
+
+#Using case_when...
+
+lobsters_plus_sizes <-lobsters_plus %>%
+   mutate(size_bin= case_when( size_mm <= 70.0 ~ "small", 
+    size_mm > 70.0 ~ "large"))
+
+#and using case_when again...
+
+lobsters_plus_mpa <-lobsters_plus_sizes %>%
+   mutate(designation= 
+            case_when( site %in% c("ivee", "napl") ~ "MPA", 
+                       site %in% c("aque", "carp", "mohk") ~ "not MPA"))
+
+
+```
+
+
